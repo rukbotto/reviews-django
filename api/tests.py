@@ -30,3 +30,70 @@ class ReviewModelTests(TestCase):
         reviews = Review.objects.count()
 
         self.assertEqual(reviews, 1)
+
+    def test_can_create_valid_review(self):
+        review = Review(
+            title='This is a very very very very very very very veeeeery long title',
+            summary=''.join(['a' for i in range(10000)]),
+            rating=1,
+            ip_address='127.0.0.1',
+            company='Some Company',
+            reviewer='Some Reviewer',
+        )
+        review.save()
+
+        reviews = Review.objects.count()
+
+        self.assertEqual(reviews, 1)
+
+    def test_cannot_create_review_long_title(self):
+        review = Review(
+            title='This is a very very very very very very very very very long title',
+            summary='This is my first review.',
+            rating=1,
+            ip_address='127.0.0.1',
+            company='Some Company',
+            reviewer='Some Reviewer',
+        )
+
+        with self.assertRaises(Exception) as cm:
+            review.save()
+
+    def test_cannot_create_review_long_summary(self):
+        review = Review(
+            title='My review',
+            summary=''.join(['a' for i in range(10001)]),
+            rating=1,
+            ip_address='127.0.0.1',
+            company='Some Company',
+            reviewer='Some Reviewer',
+        )
+
+        with self.assertRaises(Exception) as cm:
+            review.save()
+
+    def test_cannot_create_review_below_zero_rating(self):
+        review = Review(
+            title='My review',
+            summary='This is my first review.',
+            rating=-1,
+            ip_address='127.0.0.1',
+            company='Some Company',
+            reviewer='Some Reviewer',
+        )
+
+        with self.assertRaises(Exception):
+            review.save()
+
+    def test_cannot_create_review_invalid_ip_address(self):
+        review = Review(
+            title='My review',
+            summary='This is my first review.',
+            rating=1,
+            ip_address='127,0,0,1',
+            company='Some Company',
+            reviewer='Some Reviewer',
+        )
+
+        with self.assertRaises(Exception):
+            review.save()
