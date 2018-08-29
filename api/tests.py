@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from api.models import Review
 from api.serializers import ReviewSerializer
-from api.views import ReviewListView
+from api.views import ReviewListView, ReviewDetailView
 
 
 class ReviewModelTests(TestCase):
@@ -251,3 +251,53 @@ class TestReviewListView(TestCase):
         errors = response.data
 
         self.assertEqual(len(errors.get('ip_address')), 1)
+
+
+class TestReviewDetailView(TestCase):
+    def setUp(self):
+        self.review = Review(
+            title='My review',
+            summary='This is my first review.',
+            rating=1,
+            ip_address='127.0.0.1',
+            company='Some Company',
+            reviewer='Some Reviewer',
+        )
+
+        self.view = ReviewDetailView()
+
+    def _prepare_get_request(self):
+        payload = FakePayload('')
+        request = WSGIRequest({
+            'REQUEST_METHOD': 'GET',
+            'CONTENT_LENGTH': 0,
+            'wsgi.input': payload
+        })
+        return request
+
+    def test_get_review(self):
+        self.review.save()
+
+        request = self._prepare_get_request()
+        response = self.view.dispatch(request, pk=self.review.id)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.data
+
+        self.assertIsNotNone(data.get('id'))
+        self.assertEqual(data.get('title'), 'My review')
+        self.assertEqual(data.get('summary'), 'This is my first review.')
+        self.assertEqual(data.get('rating'), 1)
+        self.assertEqual(data.get('ip_address'), '127.0.0.1')
+        self.assertEqual(data.get('company'), 'Some Company')
+        self.assertEqual(data.get('reviewer'), 'Some Reviewer')
+        self.assertEqual(Review.objects.count(), 1)
+
+    def test_review_not_found(self):
+        request = self._prepare_get_request()
+        response = self.view.dispatch(request, pk=1)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
