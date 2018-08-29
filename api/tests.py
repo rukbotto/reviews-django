@@ -1,9 +1,16 @@
 import re
+
+from django.core.handlers.wsgi import WSGIRequest
 from django.test import TestCase
+from django.test.client import FakePayload
 from rest_framework import serializers
+from rest_framework import status
+from rest_framework.parsers import JSONParser
+from rest_framework.views import APIView
 
 from api.models import Review
 from api.serializers import ReviewSerializer
+from api.views import ReviewListView
 
 
 class ReviewModelTests(TestCase):
@@ -143,3 +150,104 @@ class ReviewSerializerTests(TestCase):
         self.assertIsInstance(serializer, serializers.ModelSerializer)
         self.assertFalse(serializer.is_valid())
         self.assertEqual(len(serializer.errors.get('ip_address')), 1)
+
+
+class TestReviewListView(TestCase):
+    def setUp(self):
+        self.context = {
+            'title': 'My review',
+            'summary': 'This is my first review.',
+            'rating': 1,
+            'ip_address': '127.0.0.1',
+            'company': 'Some Company',
+            'reviewer': 'Some Reviewer'
+        }
+
+        self.data = '''
+        {{
+            "title": "{c[title]}",
+            "summary": "{c[summary]}",
+            "rating": {c[rating]},
+            "ip_address": "{c[ip_address]}",
+            "company": "{c[company]}",
+            "reviewer": "{c[reviewer]}"
+        }}
+        '''
+
+        self.view = ReviewListView()
+
+    def _prepare_request(self, data):
+        payload = FakePayload(data)
+        request = WSGIRequest({
+            'REQUEST_METHOD': 'POST',
+            'CONTENT_TYPE': 'application/json',
+            'CONTENT_LENGTH': '{}'.format(len(payload)),
+            'wsgi.input': payload
+        })
+        return request
+
+    def test_post_review(self):
+        request = self._prepare_request(self.data.format(c=self.context))
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        data = response.data
+
+        self.assertIsNotNone(data.get('id'))
+        self.assertEqual(data.get('title'), 'My review')
+        self.assertEqual(data.get('summary'), 'This is my first review.')
+        self.assertEqual(data.get('rating'), 1)
+        self.assertEqual(data.get('ip_address'), '127.0.0.1')
+        self.assertEqual(data.get('company'), 'Some Company')
+        self.assertEqual(data.get('reviewer'), 'Some Reviewer')
+        self.assertEqual(Review.objects.count(), 1)
+
+    def test_post_review_long_title(self):
+        self.context['title'] = 'This is a very very very very very very very very very long title'
+        request = self._prepare_request(self.data.format(c=self.context))
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        errors = response.data
+
+        self.assertEqual(len(errors.get('title')), 1)
+
+    def test_post_review_long_summary(self):
+        self.context['summary'] = ''.join(['a' for i in range(10001)])
+        request = self._prepare_request(self.data.format(c=self.context))
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        errors = response.data
+
+        self.assertEqual(len(errors.get('summary')), 1)
+
+    def test_post_review_below_zero_rating(self):
+        self.context['rating'] = -1
+        request = self._prepare_request(self.data.format(c=self.context))
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        errors = response.data
+
+        self.assertEqual(len(errors.get('rating')), 1)
+
+    def test_post_review_invalid_ip_address(self):
+        self.context['ip_address'] = '127,0,0,1'
+        request = self._prepare_request(self.data.format(c=self.context))
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        errors = response.data
+
+        self.assertEqual(len(errors.get('ip_address')), 1)
