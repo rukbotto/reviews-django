@@ -11,10 +11,10 @@ from api.views import ReviewListView
 
 class TestReviewListView(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            'user1',
-            'user1@example.com',
-            'user1_pwd'
+        self.user_john = User.objects.create_user(
+            'john',
+            'john@example.com',
+            'john_pwd'
         )
 
         self.user_fred = User.objects.create_user(
@@ -23,14 +23,14 @@ class TestReviewListView(TestCase):
             'fred_pwd'
         )
 
-        self.review = Review(
+        self.review_by_john = Review(
             title='My review',
             summary='This is my first review.',
             rating=1,
             ip_address='127.0.0.1',
             company='Some Company',
             reviewer='Some Reviewer',
-            user=self.user,
+            user=self.user_john,
         )
 
         self.review_by_fred = Review(
@@ -54,7 +54,7 @@ class TestReviewListView(TestCase):
 
         self.view = ReviewListView()
 
-    def _prepare_request(self, data):
+    def _prepare_post_request(self, data):
         payload_content = '''
         {{
             "title": "{c[title]}",
@@ -73,7 +73,7 @@ class TestReviewListView(TestCase):
             'CONTENT_LENGTH': '{}'.format(len(payload)),
             'wsgi.input': payload
         })
-        request.user = self.user
+        request.user = self.user_john
         request._dont_enforce_csrf_checks = True
         return request
 
@@ -90,7 +90,7 @@ class TestReviewListView(TestCase):
         return request
 
     def test_post_review(self):
-        request = self._prepare_request(self.data)
+        request = self._prepare_post_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -105,12 +105,12 @@ class TestReviewListView(TestCase):
         self.assertEqual(data.get('ip_address'), '127.0.0.1')
         self.assertEqual(data.get('company'), 'Some Company')
         self.assertEqual(data.get('reviewer'), 'Some Reviewer')
-        self.assertEqual(data.get('user'), 'user1')
+        self.assertEqual(data.get('user'), 'john')
         self.assertEqual(Review.objects.count(), 1)
 
     def test_post_review_long_title(self):
         self.data['title'] = 'This is a very very very very very very very very very long title'
-        request = self._prepare_request(self.data)
+        request = self._prepare_post_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -122,7 +122,7 @@ class TestReviewListView(TestCase):
 
     def test_post_review_long_summary(self):
         self.data['summary'] = ''.join(['a' for i in range(10001)])
-        request = self._prepare_request(self.data)
+        request = self._prepare_post_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -134,7 +134,7 @@ class TestReviewListView(TestCase):
 
     def test_post_review_below_zero_rating(self):
         self.data['rating'] = -1
-        request = self._prepare_request(self.data)
+        request = self._prepare_post_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -146,7 +146,7 @@ class TestReviewListView(TestCase):
 
     def test_post_review_invalid_ip_address(self):
         self.data['ip_address'] = '127,0,0,1'
-        request = self._prepare_request(self.data)
+        request = self._prepare_post_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -157,9 +157,9 @@ class TestReviewListView(TestCase):
         self.assertEqual(len(errors.get('ip_address')), 1)
 
     def test_get_reviews(self):
-        self.review.save()
+        self.review_by_john.save()
 
-        request = self._prepare_get_request(self.user)
+        request = self._prepare_get_request(self.user_john)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -171,7 +171,7 @@ class TestReviewListView(TestCase):
         self.assertIsNotNone(data[0].get('id'))
 
     def test_get_zero_reviews(self):
-        request = self._prepare_get_request(self.user)
+        request = self._prepare_get_request(self.user_john)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -182,7 +182,7 @@ class TestReviewListView(TestCase):
         self.assertEqual(len(data), 0)
 
     def test_get_own_reviews(self):
-        self.review.save()
+        self.review_by_john.save()
         self.review_by_fred.save()
 
         request = self._prepare_get_request(self.user_fred)
