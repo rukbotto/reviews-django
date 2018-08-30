@@ -1,5 +1,7 @@
 # Reviews Django
 
+[![Build Status](https://travis-ci.org/rukbotto/reviews-django.svg?branch=master)](https://travis-ci.org/rukbotto/reviews-django)
+
 A simple REST API for submitting and retrieving user reviews powered by *Django*. It uses [*Django REST Framework*](http://www.django-rest-framework.org).
 
 ## Installation
