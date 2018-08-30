@@ -1,5 +1,6 @@
 import re
 
+from django.contrib.auth.models import User
 from django.core.handlers.wsgi import WSGIRequest
 from django.test import TestCase
 from django.test.client import FakePayload
@@ -15,6 +16,12 @@ from api.views import ReviewListView, ReviewDetailView
 
 class ReviewModelTests(TestCase):
     def setUp(self):
+        self.user = User.objects.create_user(
+            'user1',
+            'user1@example.com',
+            'user1_pwd'
+        )
+
         self.review = Review(
             title='My review',
             summary='This is my first review.',
@@ -22,6 +29,7 @@ class ReviewModelTests(TestCase):
             ip_address='127.0.0.1',
             company='Some Company',
             reviewer='Some Reviewer',
+            user=self.user,
         )
 
     def test_save_model(self):
@@ -34,6 +42,7 @@ class ReviewModelTests(TestCase):
         self.assertEqual(self.review.ip_address, '127.0.0.1')
         self.assertEqual(self.review.company, 'Some Company')
         self.assertEqual(self.review.reviewer, 'Some Reviewer')
+        self.assertEqual(self.review.user.username, 'user1')
 
         iso_re = re.compile('\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{1,6}[+-]{1}\d{2}:\d{2}')
 
@@ -69,6 +78,12 @@ class ReviewModelTests(TestCase):
 
 class ReviewSerializerTests(TestCase):
     def setUp(self):
+        self.user = User.objects.create_user(
+            'user1',
+            'user1@example.com',
+            'user1_pwd'
+        )
+
         self.review = Review(
             title='My review',
             summary='This is my first review.',
@@ -76,6 +91,7 @@ class ReviewSerializerTests(TestCase):
             ip_address='127.0.0.1',
             company='Some Company',
             reviewer='Some Reviewer',
+            user=self.user,
         )
 
         self.data = {
@@ -103,6 +119,7 @@ class ReviewSerializerTests(TestCase):
         self.assertEqual(data.get('ip_address'), '127.0.0.1')
         self.assertEqual(data.get('company'), 'Some Company')
         self.assertEqual(data.get('reviewer'), 'Some Reviewer')
+        self.assertEqual(data.get('user'), 'user1')
 
     def test_deserialize_data(self):
         serializer = ReviewSerializer(data=self.data)
@@ -154,7 +171,13 @@ class ReviewSerializerTests(TestCase):
 
 class TestReviewListView(TestCase):
     def setUp(self):
-        self.context = {
+        self.user = User.objects.create_user(
+            'user1',
+            'user1@example.com',
+            'user1_pwd'
+        )
+
+        self.data = {
             'title': 'My review',
             'summary': 'This is my first review.',
             'rating': 1,
@@ -163,7 +186,10 @@ class TestReviewListView(TestCase):
             'reviewer': 'Some Reviewer'
         }
 
-        self.data = '''
+        self.view = ReviewListView()
+
+    def _prepare_request(self, data):
+        payload_content = '''
         {{
             "title": "{c[title]}",
             "summary": "{c[summary]}",
@@ -172,22 +198,21 @@ class TestReviewListView(TestCase):
             "company": "{c[company]}",
             "reviewer": "{c[reviewer]}"
         }}
-        '''
+        '''.format(c=data)
 
-        self.view = ReviewListView()
-
-    def _prepare_request(self, data):
-        payload = FakePayload(data)
+        payload = FakePayload(payload_content)
         request = WSGIRequest({
             'REQUEST_METHOD': 'POST',
             'CONTENT_TYPE': 'application/json',
             'CONTENT_LENGTH': '{}'.format(len(payload)),
             'wsgi.input': payload
         })
+        request.user = self.user
+        request._dont_enforce_csrf_checks = True
         return request
 
     def test_post_review(self):
-        request = self._prepare_request(self.data.format(c=self.context))
+        request = self._prepare_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -202,11 +227,12 @@ class TestReviewListView(TestCase):
         self.assertEqual(data.get('ip_address'), '127.0.0.1')
         self.assertEqual(data.get('company'), 'Some Company')
         self.assertEqual(data.get('reviewer'), 'Some Reviewer')
+        self.assertEqual(data.get('user'), 'user1')
         self.assertEqual(Review.objects.count(), 1)
 
     def test_post_review_long_title(self):
-        self.context['title'] = 'This is a very very very very very very very very very long title'
-        request = self._prepare_request(self.data.format(c=self.context))
+        self.data['title'] = 'This is a very very very very very very very very very long title'
+        request = self._prepare_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -217,8 +243,8 @@ class TestReviewListView(TestCase):
         self.assertEqual(len(errors.get('title')), 1)
 
     def test_post_review_long_summary(self):
-        self.context['summary'] = ''.join(['a' for i in range(10001)])
-        request = self._prepare_request(self.data.format(c=self.context))
+        self.data['summary'] = ''.join(['a' for i in range(10001)])
+        request = self._prepare_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -229,8 +255,8 @@ class TestReviewListView(TestCase):
         self.assertEqual(len(errors.get('summary')), 1)
 
     def test_post_review_below_zero_rating(self):
-        self.context['rating'] = -1
-        request = self._prepare_request(self.data.format(c=self.context))
+        self.data['rating'] = -1
+        request = self._prepare_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -241,8 +267,8 @@ class TestReviewListView(TestCase):
         self.assertEqual(len(errors.get('rating')), 1)
 
     def test_post_review_invalid_ip_address(self):
-        self.context['ip_address'] = '127,0,0,1'
-        request = self._prepare_request(self.data.format(c=self.context))
+        self.data['ip_address'] = '127,0,0,1'
+        request = self._prepare_request(self.data)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -255,6 +281,12 @@ class TestReviewListView(TestCase):
 
 class TestReviewDetailView(TestCase):
     def setUp(self):
+        self.user = User.objects.create_user(
+            'user1',
+            'user1@example.com',
+            'user1_pwd'
+        )
+
         self.review = Review(
             title='My review',
             summary='This is my first review.',
@@ -262,6 +294,7 @@ class TestReviewDetailView(TestCase):
             ip_address='127.0.0.1',
             company='Some Company',
             reviewer='Some Reviewer',
+            user=self.user,
         )
 
         self.view = ReviewDetailView()
@@ -293,6 +326,7 @@ class TestReviewDetailView(TestCase):
         self.assertEqual(data.get('ip_address'), '127.0.0.1')
         self.assertEqual(data.get('company'), 'Some Company')
         self.assertEqual(data.get('reviewer'), 'Some Reviewer')
+        self.assertEqual(data.get('user'), 'user1')
         self.assertEqual(Review.objects.count(), 1)
 
     def test_review_not_found(self):
