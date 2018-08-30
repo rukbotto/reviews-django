@@ -131,8 +131,43 @@ Run database migrations:
 (reviews-django) $ python manage.py migrate
 ```
 
-Finally run the local development server:
+Run the local development server:
 
 ```
 (reviews-django) $ python manage.py runserver
+```
+
+To make queries to the API, first create a superuser:
+
+```
+(reviews-django) $ python manage.py createsuperuser --username your_username
+```
+
+An email address and a password must be provided after running the command.
+
+Then run the provided `test-api` script:
+
+```
+(reviews-django) $ script/test-api http://localhost:8000/api/reviews/ your_username:your_password --file data.json
+```
+
+The above command will make a POST request to the `/api/reviews/` endpoint as the user `your_username`, in order to create a new review. The review data must be provided in the file `data/data.json`.
+
+The script output will be something like this:
+
+```
+201
+{"id":1,"user":"john","title":"My review","summary":"This is my first review.","rating":1,"ip_address":"127.0.0.1","company":"Some Company","reviewer":"Some Reviewer","created_at":"2018-08-30T16:30:10.223029Z"}
+```
+
+To retrieve all the reviews for a given user, make a GET request to the `/api/reviews/` endpoint:
+
+```
+(reviews-django) $ script/test-api http://localhost:8000/api/reviews/ your_username:your_password
+```
+
+To retrieve a single review, make a GET request to the `/api/review/` endpoint:
+
+```
+(reviews-django) $ script/test-api http://localhost:8000/api/review/1/ your_username:your_password
 ```

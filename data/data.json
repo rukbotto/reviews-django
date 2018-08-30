@@ -1,0 +1,8 @@
+{
+  "title": "My review",
+  "summary": "This is my first review.",
+  "rating": 1,
+  "ip_address": "127.0.0.1",
+  "company": "Some Company",
+  "reviewer": "Some Reviewer"
+}
