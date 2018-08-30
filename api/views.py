@@ -17,7 +17,9 @@ class ReviewListView(APIView):
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
-        serializer = ReviewSerializer(data=request.data)
+        data = request.data
+        data['ip_address'] = request.META.get('REMOTE_ADDR')
+        serializer = ReviewSerializer(data=data)
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data, status.HTTP_201_CREATED)

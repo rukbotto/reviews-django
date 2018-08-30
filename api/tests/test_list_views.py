@@ -47,7 +47,6 @@ class TestReviewListView(TestCase):
             'title': 'My review',
             'summary': 'This is my first review.',
             'rating': 1,
-            'ip_address': '127.0.0.1',
             'company': 'Some Company',
             'reviewer': 'Some Reviewer'
         }
@@ -60,7 +59,6 @@ class TestReviewListView(TestCase):
             "title": "{c[title]}",
             "summary": "{c[summary]}",
             "rating": {c[rating]},
-            "ip_address": "{c[ip_address]}",
             "company": "{c[company]}",
             "reviewer": "{c[reviewer]}"
         }}
@@ -69,6 +67,7 @@ class TestReviewListView(TestCase):
         payload = FakePayload(payload_content)
         request = WSGIRequest({
             'REQUEST_METHOD': 'POST',
+            'REMOTE_ADDR': '127.0.0.1',
             'CONTENT_TYPE': 'application/json',
             'CONTENT_LENGTH': '{}'.format(len(payload)),
             'wsgi.input': payload
@@ -144,18 +143,6 @@ class TestReviewListView(TestCase):
         errors = response.data
 
         self.assertEqual(len(errors.get('rating')), 1)
-
-    def test_post_review_invalid_ip_address(self):
-        self.data['ip_address'] = '127,0,0,1'
-        request = self._prepare_post_request(self.data, self.user_john)
-        response = self.view.dispatch(request)
-
-        self.assertIsInstance(self.view, APIView)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        errors = response.data
-
-        self.assertEqual(len(errors.get('ip_address')), 1)
 
     def test_post_review_anon_user(self):
         request = self._prepare_post_request(self.data)
