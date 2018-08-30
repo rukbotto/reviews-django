@@ -25,6 +25,8 @@ class ReviewDetailView(APIView):
     def get(self, request, *args, **kwargs):
         try:
             review = Review.objects.get(pk=kwargs['pk'])
+            if request.user != review.user:
+                return Response({}, status.HTTP_403_FORBIDDEN)
         except Review.DoesNotExist:
             raise Http404
         serializer = ReviewSerializer(review)
