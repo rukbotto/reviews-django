@@ -1,6 +1,6 @@
 # Reviews Django
 
-A simple REST API application for submitting and retrieving user reviews powered by *Django*. It uses [*Django REST Framework*](http://www.django-rest-framework.org).
+A simple REST API for submitting and retrieving user reviews powered by *Django*. It uses [*Django REST Framework*](http://www.django-rest-framework.org).
 
 ## Installation
 
