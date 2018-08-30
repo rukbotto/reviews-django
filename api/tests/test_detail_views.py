@@ -82,3 +82,12 @@ class TestReviewDetailView(TestCase):
 
         self.assertIsInstance(self.view, APIView)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_get_review_anon_user(self):
+        self.review_by_john.save()
+
+        request = self._prepare_get_request()
+        response = self.view.dispatch(request, pk=self.review_by_john.id)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
