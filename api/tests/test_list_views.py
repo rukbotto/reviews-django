@@ -17,6 +17,32 @@ class TestReviewListView(TestCase):
             'user1_pwd'
         )
 
+        self.user_fred = User.objects.create_user(
+            'fred',
+            'fred@example.com',
+            'fred_pwd'
+        )
+
+        self.review = Review(
+            title='My review',
+            summary='This is my first review.',
+            rating=1,
+            ip_address='127.0.0.1',
+            company='Some Company',
+            reviewer='Some Reviewer',
+            user=self.user,
+        )
+
+        self.review_by_fred = Review(
+            title='Review by Fred',
+            summary='This is my first review.',
+            rating=1,
+            ip_address='127.0.0.1',
+            company='Some Company',
+            reviewer='Some Reviewer',
+            user=self.user_fred,
+        )
+
         self.data = {
             'title': 'My review',
             'summary': 'This is my first review.',
@@ -48,6 +74,18 @@ class TestReviewListView(TestCase):
             'wsgi.input': payload
         })
         request.user = self.user
+        request._dont_enforce_csrf_checks = True
+        return request
+
+    def _prepare_get_request(self, user=None):
+        payload = FakePayload('')
+        request = WSGIRequest({
+            'REQUEST_METHOD': 'GET',
+            'CONTENT_LENGTH': 0,
+            'wsgi.input': payload
+        })
+        if user:
+            request.user = user
         request._dont_enforce_csrf_checks = True
         return request
 
@@ -117,3 +155,44 @@ class TestReviewListView(TestCase):
         errors = response.data
 
         self.assertEqual(len(errors.get('ip_address')), 1)
+
+    def test_get_reviews(self):
+        self.review.save()
+
+        request = self._prepare_get_request(self.user)
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.data
+
+        self.assertEqual(len(data), 1)
+        self.assertIsNotNone(data[0].get('id'))
+
+    def test_get_zero_reviews(self):
+        request = self._prepare_get_request(self.user)
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.data
+
+        self.assertEqual(len(data), 0)
+
+    def test_get_own_reviews(self):
+        self.review.save()
+        self.review_by_fred.save()
+
+        request = self._prepare_get_request(self.user_fred)
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.data
+
+        self.assertEqual(len(data), 1)
+        self.assertIsNotNone(data[0].get('id'))
+        self.assertEqual(data[0].get('title'), 'Review by Fred')

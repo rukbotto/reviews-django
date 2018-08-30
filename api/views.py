@@ -9,6 +9,10 @@ from api.serializers import ReviewSerializer
 
 
 class ReviewListView(APIView):
+    def get(self, request, *args, **kwargs):
+        serializer = ReviewSerializer(request.user.reviews.all(), many=True)
+        return Response(serializer.data)
+
     def post(self, request, *args, **kwargs):
         serializer = ReviewSerializer(data=request.data)
         if serializer.is_valid():
