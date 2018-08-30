@@ -51,6 +51,24 @@ class TestUrls(TestCase):
         self.assertIsNotNone(data.get('id'))
         self.assertEqual(data.get('user'), 'john')
 
+    def test_post_review_url_anon_user(self):
+        data = {
+            'title': 'My review',
+            'summary': 'This is my first review.',
+            'rating': 1,
+            'ip_address': '127.0.0.1',
+            'company': 'Some Company',
+            'reviewer': 'Some Reviewer'
+        }
+
+        response = self.client.post(
+            '/api/reviews/',
+            data,
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_get_reviews_url(self):
         self.client.login(username='john', password='john_pwd')
         response = self.client.get('/api/reviews/')
@@ -60,6 +78,10 @@ class TestUrls(TestCase):
         data = response.json()
 
         self.assertEqual(len(data), 1)
+
+    def test_get_reviews_url_anon_user(self):
+        response = self.client.get('/api/reviews/')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_get_review_url(self):
         self.client.login(username='john', password='john_pwd')
@@ -71,3 +93,7 @@ class TestUrls(TestCase):
 
         self.assertIsNotNone(data.get('id'))
         self.assertEqual(data.get('user'), 'john')
+
+    def test_get_review_url_anon_user(self):
+        response = self.client.get('/api/review/{}/'.format(self.review_by_john.id))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
