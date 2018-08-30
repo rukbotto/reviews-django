@@ -69,6 +69,22 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+if 'TRAVIS' in os.environ:
+    SECRET_KEY = os.environ['SECRET_KEY']
+
+    DEBUG = False
+
+    ALLOWED_HOSTS = []
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ['DATABASE_NAME'],
+            'USER': os.environ['DATABASE_USER'],
+            'PASSWORD': os.environ['DATABASE_PASSWORD'],
+        }
+    }
+
 try:
     from reviews_django.local_settings import *
 except ImportError:
