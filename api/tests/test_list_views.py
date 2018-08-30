@@ -103,7 +103,7 @@ class TestReviewListView(TestCase):
         self.assertEqual(data.get('title'), 'My review')
         self.assertEqual(data.get('summary'), 'This is my first review.')
         self.assertEqual(data.get('rating'), 1)
-        self.assertEqual(data.get('ip_address'), '127.0.0.1')
+        self.assertFalse('ip_address' in data)
         self.assertEqual(data.get('company'), 'Some Company')
         self.assertEqual(data.get('reviewer'), 'Some Reviewer')
         self.assertEqual(data.get('user'), 'john')
