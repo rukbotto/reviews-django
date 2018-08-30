@@ -54,7 +54,7 @@ class TestReviewListView(TestCase):
 
         self.view = ReviewListView()
 
-    def _prepare_post_request(self, data):
+    def _prepare_post_request(self, data, user=None):
         payload_content = '''
         {{
             "title": "{c[title]}",
@@ -73,7 +73,8 @@ class TestReviewListView(TestCase):
             'CONTENT_LENGTH': '{}'.format(len(payload)),
             'wsgi.input': payload
         })
-        request.user = self.user_john
+        if user:
+            request.user = user
         request._dont_enforce_csrf_checks = True
         return request
 
@@ -90,7 +91,7 @@ class TestReviewListView(TestCase):
         return request
 
     def test_post_review(self):
-        request = self._prepare_post_request(self.data)
+        request = self._prepare_post_request(self.data, self.user_john)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -110,7 +111,7 @@ class TestReviewListView(TestCase):
 
     def test_post_review_long_title(self):
         self.data['title'] = 'This is a very very very very very very very very very long title'
-        request = self._prepare_post_request(self.data)
+        request = self._prepare_post_request(self.data, self.user_john)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -122,7 +123,7 @@ class TestReviewListView(TestCase):
 
     def test_post_review_long_summary(self):
         self.data['summary'] = ''.join(['a' for i in range(10001)])
-        request = self._prepare_post_request(self.data)
+        request = self._prepare_post_request(self.data, self.user_john)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -134,7 +135,7 @@ class TestReviewListView(TestCase):
 
     def test_post_review_below_zero_rating(self):
         self.data['rating'] = -1
-        request = self._prepare_post_request(self.data)
+        request = self._prepare_post_request(self.data, self.user_john)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -146,7 +147,7 @@ class TestReviewListView(TestCase):
 
     def test_post_review_invalid_ip_address(self):
         self.data['ip_address'] = '127,0,0,1'
-        request = self._prepare_post_request(self.data)
+        request = self._prepare_post_request(self.data, self.user_john)
         response = self.view.dispatch(request)
 
         self.assertIsInstance(self.view, APIView)
@@ -155,6 +156,13 @@ class TestReviewListView(TestCase):
         errors = response.data
 
         self.assertEqual(len(errors.get('ip_address')), 1)
+
+    def test_post_review_anon_user(self):
+        request = self._prepare_post_request(self.data)
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_get_reviews(self):
         self.review_by_john.save()
@@ -196,3 +204,12 @@ class TestReviewListView(TestCase):
         self.assertEqual(len(data), 1)
         self.assertIsNotNone(data[0].get('id'))
         self.assertEqual(data[0].get('title'), 'Review by Fred')
+
+    def test_get_reviews_anon_user(self):
+        self.review_by_john.save()
+
+        request = self._prepare_get_request()
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
