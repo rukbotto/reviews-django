@@ -14,3 +14,6 @@ class Review(models.Model):
         on_delete=models.CASCADE
     )
     created_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title

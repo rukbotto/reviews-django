@@ -159,7 +159,7 @@ The script output will be something like this:
 
 ```
 201
-{"id":1,"user":"john","title":"My review","summary":"This is my first review.","rating":1,"ip_address":"127.0.0.1","company":"Some Company","reviewer":"Some Reviewer","created_at":"2018-08-30T16:30:10.223029Z"}
+{"id":1,"user":"john","title":"My review","summary":"This is my first review.","rating":1,"company":"Some Company","reviewer":"Some Reviewer","created_at":"2018-08-30T16:30:10.223029Z"}
 ```
 
 To retrieve all the reviews for a given user, make a GET request to the `/api/reviews/` endpoint:

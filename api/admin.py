@@ -1,3 +1,12 @@
 from django.contrib import admin
 
-# Register your models here.
+from api.models import Review
+
+
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('title', 'rating', 'company', 'reviewer')
+    list_filter = ('rating',)
+    search_fields = ['title', 'company', 'reviewer']
+
+
+admin.site.register(Review, ReviewAdmin)

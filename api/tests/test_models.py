@@ -41,6 +41,10 @@ class ReviewModelTests(TestCase):
         self.assertIsNotNone(iso_re.match(str(self.review.created_at)))
         self.assertEqual(Review.objects.count(), 1)
 
+    def test_model_str(self):
+        self.review.save()
+        self.assertEquals(str(self.review), 'My review')
+
     def test_save_valid_model(self):
         self.review.title = 'This is a very very very very very very very veeeeery long title'
         self.summary = ''.join(['a' for i in range(10000)])
