@@ -144,6 +144,18 @@ class TestReviewListView(TestCase):
 
         self.assertEqual(len(errors.get('rating')), 1)
 
+    def test_post_review_beyond_five_rating(self):
+        self.data['rating'] = 6
+        request = self._prepare_post_request(self.data, self.user_john)
+        response = self.view.dispatch(request)
+
+        self.assertIsInstance(self.view, APIView)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        errors = response.data
+
+        self.assertEqual(len(errors.get('rating')), 1)
+
     def test_post_review_anon_user(self):
         request = self._prepare_post_request(self.data)
         response = self.view.dispatch(request)

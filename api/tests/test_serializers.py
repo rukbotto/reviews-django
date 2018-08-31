@@ -90,6 +90,14 @@ class ReviewSerializerTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertEqual(len(serializer.errors.get('rating')), 1)
 
+    def test_validate_beyond_five_rating(self):
+        self.data['rating'] = 6
+        serializer = ReviewSerializer(data=self.data)
+
+        self.assertIsInstance(serializer, serializers.ModelSerializer)
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(len(serializer.errors.get('rating')), 1)
+
     def test_validate_invalid_ip_address(self):
         self.data['ip_address'] = '127,0,0,1'
         serializer = ReviewSerializer(data=self.data)
